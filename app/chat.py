@@ -1,12 +1,13 @@
 import os
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from groq import Groq
 from app.memory import save_message, load_recent_memory
+from app.classifier import classify_distress
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+GROQ_MODEL = "llama-3.1-8b-instant"
 
 SYSTEM_PROMPT = """You are a compassionate peer listener called Manas.
 Your role is to provide emotional support and a safe space to talk.
@@ -14,33 +15,73 @@ You do NOT diagnose, prescribe medication, or act as a therapist.
 You speak warmly, gently, and without judgment.
 For any serious distress, you always encourage speaking to a professional."""
 
-#Function to send the message and get the response using memory 
-def chat(user_message: str) -> str:
-    """Send a message and get a response with memory"""
+CRISIS_RESPONSE = """I'm really concerned about what you've shared.
+Please reach out to a crisis helpline immediately:
 
-    #  Load past conversations from ChromaDB
+iCall (India): 9152987821
+Vandrevala Foundation: 1860-2662-345
+
+You don't have to face this alone."""
+
+
+def build_messages(history: list, user_message: str, distress: str) -> list:
+    """Convert memory history into Groq message format"""
+    
+    # Always start with system prompt
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    
+    # Add past conversation from memory
+    for msg in history:
+        if isinstance(msg, dict):
+            role = msg["parts"][0]["text"] if "parts" in msg else msg.get("content", "")
+            speaker = "assistant" if msg.get("role") == "model" else "user"
+        else:
+            role = msg.parts[0].text
+            speaker = "assistant" if msg.role == "model" else "user"
+        messages.append({"role": speaker, "content": role})
+    
+    # Add current message
+    if distress == "medium":
+        guided = (
+            user_message +
+            " [Note to Manas: This person seems moderately distressed."
+            " Respond with extra care and gently suggest professional help.]"
+        )
+        messages.append({"role": "user", "content": guided})
+    else:
+        messages.append({"role": "user", "content": user_message})
+    
+    return messages
+
+
+def chat(user_message: str) -> str:
+    """Send a message and get a response with memory and distress detection"""
+
+    # Step 1 — Check distress level first
+    distress = classify_distress(user_message)
+    print(f"[Distress level: {distress}]")
+
+    # Step 2 — High distress = crisis response, skip LLM
+    if distress == "high":
+        save_message("user", user_message)
+        save_message("model", CRISIS_RESPONSE)
+        return CRISIS_RESPONSE
+
+    # Step 3 — Load memory
     history = load_recent_memory(n=10)
 
-    # Add the new user message to history
-    history.append(
-        types.Content(
-            role="user",
-            parts=[types.Part(text=user_message)]
-        )
+    # Step 4 — Build messages in Groq format
+    messages = build_messages(history, user_message, distress)
+
+    # Step 5 — Send to Groq
+    response = client.chat.completions.create(
+        model=GROQ_MODEL,
+        messages=messages
     )
 
-    # Send everything to Gemini
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=history,
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT
-        )
-    )
+    reply = response.choices[0].message.content
 
-    reply = response.text
-
-    # Save both messages to ChromaDB for next time
+    # Step 6 — Save to memory
     save_message("user", user_message)
     save_message("model", reply)
 

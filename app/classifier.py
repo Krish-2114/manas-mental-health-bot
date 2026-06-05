@@ -8,9 +8,14 @@ emotion_classifier = pipeline(
     model="j-hartmann/emotion-english-distilroberta-base",
     top_k=None)
 
-HIGH_EMOTION_DISTRESS=["fear","sadness","disgust"]
-MEDIUM_EMOTION_DISTRESS=["anger","surprise"]
-LOW_EMOTION_DISTRESS=["joy", "neutral"]
+# Only explicit crisis emotions → high
+HIGH_EMOTION_DISTRESS = ["disgust"]
+
+# Sadness and fear → medium, Manas talks but with extra care
+MEDIUM_EMOTION_DISTRESS = ["fear", "sadness", "anger", "surprise"]
+
+# Positive and neutral → low
+LOW_EMOTION_DISTRESS = ["joy", "neutral"]
 
 CRISIS_KEYWORDS = [
     "end my life", "kill myself", "want to die",
@@ -25,6 +30,9 @@ def check_crisis_keywords(message: str)->bool:
     return False
 
 def classify_distress(message: str)->str:
+
+    if len(message.split()) < 3:
+        return "low"
 
     if(check_crisis_keywords(message)):
         return "high"
