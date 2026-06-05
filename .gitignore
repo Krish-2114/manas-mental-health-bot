@@ -1,0 +1,42 @@
+# Secret keys — NEVER upload these
+.env
+.env.local
+.env.production
+
+# Virtual environment — too large, recreatable
+venv/
+env/
+.venv/
+
+# Python cache — auto-generated, not your code
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Database and local storage — personal data
+*.db
+*.sqlite3
+memory_store/
+
+# OS files — irrelevant to your project
+.DS_Store          # Mac
+Thumbs.db          # Windows
+desktop.ini        # Windows
+
+# IDE settings — personal preference, not code
+.vscode/
+.idea/
+*.cursor
+
+# Build files — auto-generated
+dist/
+build/
+*.egg-info/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
