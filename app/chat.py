@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from groq import Groq
 from app.memory import save_message, load_recent_memory
 from app.classifier import classify_distress
+from app.safety import safety_check, validate_input, review_output
 
 load_dotenv()
 
@@ -26,11 +27,9 @@ You don't have to face this alone."""
 
 def build_messages(history: list, user_message: str, distress: str) -> list:
     """Convert memory history into Groq message format"""
-    
-    # Always start with system prompt
+
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    
-    # Add past conversation from memory
+
     for msg in history:
         if isinstance(msg, dict):
             role = msg["parts"][0]["text"] if "parts" in msg else msg.get("content", "")
@@ -39,8 +38,7 @@ def build_messages(history: list, user_message: str, distress: str) -> list:
             role = msg.parts[0].text
             speaker = "assistant" if msg.role == "model" else "user"
         messages.append({"role": speaker, "content": role})
-    
-    # Add current message
+
     if distress == "medium":
         guided = (
             user_message +
@@ -50,30 +48,42 @@ def build_messages(history: list, user_message: str, distress: str) -> list:
         messages.append({"role": "user", "content": guided})
     else:
         messages.append({"role": "user", "content": user_message})
-    
+
     return messages
 
 
 def chat(user_message: str) -> str:
-    """Send a message and get a response with memory and distress detection"""
+    """Send a message and get a response with memory, safety and distress detection"""
 
-    # Step 1 — Check distress level first
+    # Step 1 — Validate input
+    is_valid, error_msg = validate_input(user_message)
+    if not is_valid:
+        return error_msg
+
+    # Step 2 — Hybrid safety check (keyword + LLM)
+    is_safe, safety_result = safety_check(user_message)
+    if not is_safe:
+        save_message("user", user_message)
+        save_message("model", CRISIS_RESPONSE)
+        return CRISIS_RESPONSE
+
+    # Step 3 — Distress classification
     distress = classify_distress(user_message)
     print(f"[Distress level: {distress}]")
 
-    # Step 2 — High distress = crisis response, skip LLM
+    # Step 4 — High distress = crisis response
     if distress == "high":
         save_message("user", user_message)
         save_message("model", CRISIS_RESPONSE)
         return CRISIS_RESPONSE
 
-    # Step 3 — Load memory
+    # Step 5 — Load memory
     history = load_recent_memory(n=10)
 
-    # Step 4 — Build messages in Groq format
+    # Step 6 — Build messages
     messages = build_messages(history, user_message, distress)
 
-    # Step 5 — Send to Groq
+    # Step 7 — Send to Groq
     response = client.chat.completions.create(
         model=GROQ_MODEL,
         messages=messages
@@ -81,7 +91,10 @@ def chat(user_message: str) -> str:
 
     reply = response.choices[0].message.content
 
-    # Step 6 — Save to memory
+    # Step 8 — Review output before sending
+    reply = review_output(reply)
+
+    # Step 9 — Save to memory
     save_message("user", user_message)
     save_message("model", reply)
 
