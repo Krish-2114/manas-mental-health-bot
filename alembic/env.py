@@ -6,7 +6,7 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from app.database import Base
-from app.models import Message, Session, User  # noqa: F401
+from app.models import EmergencyContact, Message, Session, SosAlertLog, User, UserPortfolio  # noqa: F401
 
 load_dotenv()
 

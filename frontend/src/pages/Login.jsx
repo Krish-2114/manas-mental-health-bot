@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import client from "../api/client";
+import AmbientBackground from "../components/design/AmbientBackground";
+import GlassCard from "../components/design/GlassCard";
+import ThemeToggle from "../components/design/ThemeToggle";
+import ManasOrb from "../components/orb/ManasOrb";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -26,60 +30,72 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-manas-50 via-white to-purple-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+    <div className="min-h-screen relative flex items-center justify-center px-4 py-12">
+      <AmbientBackground />
+      <div className="absolute top-5 right-5 z-10">
+        <ThemeToggle compact />
+      </div>
+
+      <GlassCard className="relative z-10 w-full max-w-md p-8 md:p-10">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-manas-600 to-manas-500 bg-clip-text text-transparent">
-            Manas
-          </h1>
-          <p className="text-gray-500 mt-2">Welcome back</p>
+          <ManasOrb state={loading ? "thinking" : "idle"} size="md" className="mx-auto mb-5" />
+          <h1 className="font-display text-3xl text-ocean-text-primary">Welcome back</h1>
+          <p className="text-ocean-text-secondary mt-2">Your calm space is waiting.</p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl">
+          <div className="mb-4 p-3 rounded-2xl bg-ocean-danger/10 text-ocean-danger text-sm border border-ocean-danger/20">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label htmlFor="username" className="block text-sm font-medium text-ocean-text-primary mb-1.5">
+              Username
+            </label>
             <input
+              id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-manas-500/30 focus:border-manas-500"
+              className="ocean-input"
               placeholder="Your username"
+              autoComplete="username"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-ocean-text-primary mb-1.5">
+              Password
+            </label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-manas-500/30 focus:border-manas-500"
+              className="ocean-input"
               placeholder="Your password"
+              autoComplete="current-password"
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-manas-600 to-manas-500 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign In"}
+          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-50">
+            {loading ? "Signing in..." : "Sign in gently"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Don't have an account?{" "}
-          <Link to="/signup" className="text-manas-600 font-medium hover:underline">
-            Sign up
+        <p className="text-center text-sm text-ocean-text-secondary mt-6">
+          New here?{" "}
+          <Link to="/signup" className="text-ocean-primary font-medium hover:underline">
+            Create account
+          </Link>
+          {" · "}
+          <Link to="/about" className="text-ocean-primary font-medium hover:underline">
+            About Manas
           </Link>
         </p>
-      </div>
+      </GlassCard>
     </div>
   );
 }

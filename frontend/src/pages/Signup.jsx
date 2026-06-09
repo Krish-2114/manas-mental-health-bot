@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import client from "../api/client";
+import AmbientBackground from "../components/design/AmbientBackground";
+import GlassCard from "../components/design/GlassCard";
+import ThemeToggle from "../components/design/ThemeToggle";
+import ManasOrb from "../components/orb/ManasOrb";
+import { startOnboarding } from "../utils/onboarding";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -17,7 +22,8 @@ export default function Signup() {
       const { data } = await client.post("/auth/register", { username, password });
       localStorage.setItem("manas_token", data.token);
       localStorage.setItem("manas_username", data.username);
-      navigate("/chat");
+      startOnboarding();
+      navigate("/settings");
     } catch (err) {
       setError(err.response?.data?.detail || "Registration failed. Please try again.");
     } finally {
@@ -26,62 +32,72 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-manas-50 via-white to-purple-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+    <div className="min-h-screen relative flex items-center justify-center px-4 py-12">
+      <AmbientBackground />
+      <div className="absolute top-5 right-5 z-10">
+        <ThemeToggle compact />
+      </div>
+
+      <GlassCard className="relative z-10 w-full max-w-md p-8 md:p-10">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-manas-600 to-manas-500 bg-clip-text text-transparent">
-            Manas
-          </h1>
-          <p className="text-gray-500 mt-2">Create your account</p>
+          <ManasOrb state={loading ? "thinking" : "listening"} size="md" className="mx-auto mb-5" />
+          <h1 className="font-display text-3xl text-ocean-text-primary">Begin gently</h1>
+          <p className="text-ocean-text-secondary mt-2">
+            Create your account — we'll personalize your space together.
+          </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl">
+          <div className="mb-4 p-3 rounded-2xl bg-ocean-danger/10 text-ocean-danger text-sm border border-ocean-danger/20">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label htmlFor="username" className="block text-sm font-medium text-ocean-text-primary mb-1.5">
+              Username
+            </label>
             <input
+              id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
               minLength={3}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-manas-500/30 focus:border-manas-500"
+              className="ocean-input"
               placeholder="Choose a username"
+              autoComplete="username"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-ocean-text-primary mb-1.5">
+              Password
+            </label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-manas-500/30 focus:border-manas-500"
+              className="ocean-input"
               placeholder="At least 6 characters"
+              autoComplete="new-password"
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-manas-600 to-manas-500 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {loading ? "Creating account..." : "Create Account"}
+          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-50">
+            {loading ? "Creating your space..." : "Create account"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-ocean-text-secondary mt-6">
           Already have an account?{" "}
-          <Link to="/login" className="text-manas-600 font-medium hover:underline">
+          <Link to="/login" className="text-ocean-primary font-medium hover:underline">
             Sign in
           </Link>
         </p>
-      </div>
+      </GlassCard>
     </div>
   );
 }

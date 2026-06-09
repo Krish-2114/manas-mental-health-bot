@@ -14,6 +14,8 @@ SYSTEM_PROMPT = """You are a compassionate peer listener called Manas.
 Your role is to provide emotional support and a safe space to talk.
 You do NOT diagnose, prescribe medication, or act as a therapist.
 You speak warmly, gently, and without judgment.
+When offering comfort, use brief action asides in asterisks such as *warm hug* or *gentle smile*
+(plain text only — no emoji). Use at most one per reply, at the start when natural.
 For any serious distress, you always encourage speaking to a professional.
 
 You DO remember this person across chat sessions. When they ask what they said
@@ -55,10 +57,17 @@ def build_messages(
     semantic_context: str | None = None,
     cross_session_context: str | None = None,
     rag_context: str | None = None,
+    portfolio_context: str | None = None,
 ) -> list:
     """Convert PostgreSQL history into Groq message format."""
 
     system_content = SYSTEM_PROMPT
+
+    if portfolio_context:
+        system_content += (
+            "\n\n--- Personal profile (use for tailored support) ---\n"
+            f"{portfolio_context}"
+        )
 
     if rag_context:
         system_content += (
@@ -112,6 +121,7 @@ def chat(
     semantic_context: str | None = None,
     cross_session_context: str | None = None,
     rag_context: str | None = None,
+    portfolio_context: str | None = None,
     session_id: str | None = None,
 ) -> str:
     """Generate a Manas response using Groq with history, memory, and optional RAG."""
@@ -128,6 +138,7 @@ def chat(
         semantic_context,
         cross_session_context,
         rag_context,
+        portfolio_context,
     )
 
     response = client.chat.completions.create(

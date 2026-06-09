@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
 from app.rag import build_pdf_index
-from app.routers import auth_router, chat_router, rag_router, sessions_router, user_router
+from app.routers import auth_router, chat_router, portfolio_router, rag_router, sessions_router, user_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ app.include_router(auth_router.router)
 app.include_router(chat_router.router)
 app.include_router(sessions_router.router)
 app.include_router(user_router.router)
+app.include_router(portfolio_router.router)
 app.include_router(rag_router.router)
 
 

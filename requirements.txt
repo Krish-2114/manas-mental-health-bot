@@ -33,3 +33,6 @@ llama-index-readers-file>=0.2.0
 
 # Utilities
 pydantic>=2.0.0
+
+# SOS SMS (optional)
+twilio>=9.0.0

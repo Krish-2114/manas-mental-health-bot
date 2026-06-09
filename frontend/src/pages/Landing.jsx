@@ -1,70 +1,151 @@
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Heart, Lock, MessageCircle, Shield, Sparkles, Waves } from "lucide-react";
+import AmbientBackground from "../components/design/AmbientBackground";
+import GlassCard from "../components/design/GlassCard";
+import PublicNav from "../components/layout/PublicNav";
+import ManasOrb from "../components/orb/ManasOrb";
+
+const FEATURES = [
+  { icon: MessageCircle, title: "Always Listening", desc: "Share what's on your mind, anytime — without judgment." },
+  { icon: Lock, title: "Private & Secure", desc: "Your conversations stay yours. SOS alerts never share message content." },
+  { icon: Shield, title: "Crisis-Aware Support", desc: "Compassionate safety responses and helplines when you need them most." },
+  { icon: Heart, title: "Personalized Conversations", desc: "Manas learns your tone, interests, and what helps you cope." },
+  { icon: Sparkles, title: "Mood Tracking", desc: "Gently notice patterns in how you've been feeling over time." },
+  { icon: Waves, title: "Guided Reflection", desc: "Daily prompts to help you process, breathe, and grow." },
+];
+
+const STEPS = [
+  { n: "01", title: "Share how you're feeling", desc: "Start with a mood, a thought, or simply hello." },
+  { n: "02", title: "Talk naturally", desc: "No scripts. Manas listens and responds with warmth." },
+  { n: "03", title: "Reflect and grow", desc: "Journal, breathe, and track your emotional journey." },
+];
+
+const fadeUp = {
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-80px" },
+  transition: { duration: 0.6, ease: "easeOut" },
+};
 
 export default function Landing() {
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-manas-50 via-white to-purple-50">
-      <div className="absolute top-20 left-10 w-64 h-64 bg-manas-500/10 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-20 right-10 w-80 h-80 bg-purple-400/10 rounded-full blur-3xl animate-float-delayed" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-manas-500/5 rounded-full blur-3xl" />
+    <div className="min-h-screen relative overflow-x-hidden">
+      <AmbientBackground />
+      <PublicNav />
 
-      <nav className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
-        <span className="text-2xl font-bold bg-gradient-to-r from-manas-600 to-manas-500 bg-clip-text text-transparent">
-          Manas
-        </span>
-        <div className="flex gap-3">
-          <Link
-            to="/login"
-            className="px-5 py-2 text-sm font-medium text-manas-600 hover:bg-manas-50 rounded-xl transition-colors"
-          >
-            Login
+      <section className="relative z-10 max-w-6xl mx-auto px-6 pt-16 pb-24 text-center">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }}>
+          <ManasOrb state="idle" size="xl" className="mx-auto mb-10" />
+        </motion.div>
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.6 }}
+          className="font-display text-5xl md:text-7xl text-ocean-text-primary mb-5 leading-tight"
+        >
+          Hello. I'm Manas.
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.6 }}
+          className="text-xl md:text-2xl text-ocean-text-secondary max-w-2xl mx-auto mb-4"
+        >
+          A calm space for your thoughts.
+        </motion.p>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="text-ocean-text-secondary max-w-xl mx-auto mb-10 leading-relaxed"
+        >
+          Manas is an AI companion for emotional support, reflection, journaling, and wellness conversations.
+        </motion.p>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center"
+        >
+          <Link to="/signup" className="btn-primary text-base">
+            Begin your journey
           </Link>
-          <Link
-            to="/signup"
-            className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-manas-600 to-manas-500 rounded-xl hover:opacity-90 transition-opacity shadow-sm"
-          >
-            Sign Up
+          <Link to="/about" className="btn-secondary text-base">
+            Learn about Manas
           </Link>
-        </div>
-      </nav>
+        </motion.div>
+      </section>
 
-      <main className="relative z-10 flex flex-col items-center justify-center text-center px-6 pt-24 pb-32 max-w-3xl mx-auto">
-        <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-manas-700 via-manas-600 to-manas-500 bg-clip-text text-transparent mb-6">
-          Manas
-        </h1>
-        <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-          A safe space to talk. Manas is here to listen.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Link
-            to="/signup"
-            className="px-8 py-3.5 text-white bg-gradient-to-r from-manas-600 to-manas-500 rounded-xl font-semibold hover:opacity-90 transition-opacity shadow-md"
-          >
-            Get Started
-          </Link>
-          <Link
-            to="/login"
-            className="px-8 py-3.5 text-manas-600 border border-manas-200 bg-white rounded-xl font-semibold hover:bg-manas-50 transition-colors"
-          >
-            I have an account
-          </Link>
-        </div>
-
-        <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 w-full">
+      <section className="relative z-10 max-w-5xl mx-auto px-6 py-16">
+        <motion.div {...fadeUp} className="glass-card rounded-3xl p-8 md:p-10 grid md:grid-cols-4 gap-6 text-center">
           {[
-            { title: "Always listening", desc: "Share what's on your mind, anytime." },
-            { title: "Private & safe", desc: "Your conversations are yours alone." },
-            { title: "Crisis aware", desc: "Built-in safety for when you need help." },
-          ].map((card) => (
-            <div
-              key={card.title}
-              className="bg-white/80 backdrop-blur rounded-xl p-5 shadow-sm border border-gray-100"
-            >
-              <h3 className="font-semibold text-gray-900 mb-1">{card.title}</h3>
-              <p className="text-sm text-gray-500">{card.desc}</p>
+            { stat: "Private", label: "End-to-end emotional privacy" },
+            { stat: "24/7", label: "Always here when you need to talk" },
+            { stat: "Crisis-aware", label: "Safety built into every conversation" },
+            { stat: "Personal", label: "Support that adapts to you" },
+          ].map((item) => (
+            <div key={item.stat}>
+              <p className="text-2xl font-semibold text-ocean-primary mb-1">{item.stat}</p>
+              <p className="text-sm text-ocean-text-secondary">{item.label}</p>
             </div>
           ))}
+        </motion.div>
+      </section>
+
+      <section className="relative z-10 max-w-6xl mx-auto px-6 py-20">
+        <motion.h2 {...fadeUp} className="font-display text-4xl text-center text-ocean-text-primary mb-12">
+          Designed for emotional wellness
+        </motion.h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {FEATURES.map((f, i) => (
+            <motion.div key={f.title} {...fadeUp} transition={{ delay: i * 0.05 }}>
+              <GlassCard hover className="p-6 h-full">
+                <f.icon className="text-ocean-primary mb-4" size={24} />
+                <h3 className="font-semibold text-ocean-text-primary mb-2">{f.title}</h3>
+                <p className="text-sm text-ocean-text-secondary leading-relaxed">{f.desc}</p>
+              </GlassCard>
+            </motion.div>
+          ))}
         </div>
-      </main>
+      </section>
+
+      <section className="relative z-10 max-w-4xl mx-auto px-6 py-20">
+        <motion.h2 {...fadeUp} className="font-display text-4xl text-center text-ocean-text-primary mb-14">
+          How it works
+        </motion.h2>
+        <div className="space-y-8">
+          {STEPS.map((step, i) => (
+            <motion.div
+              key={step.n}
+              {...fadeUp}
+              transition={{ delay: i * 0.1 }}
+              className="flex gap-6 items-start"
+            >
+              <span className="text-3xl font-display text-ocean-accent shrink-0">{step.n}</span>
+              <GlassCard className="flex-1 p-6">
+                <h3 className="font-semibold text-ocean-text-primary text-lg mb-1">{step.title}</h3>
+                <p className="text-ocean-text-secondary">{step.desc}</p>
+              </GlassCard>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <section className="relative z-10 max-w-3xl mx-auto px-6 py-24 text-center">
+        <motion.div {...fadeUp}>
+          <ManasOrb state="listening" size="md" className="mx-auto mb-6" />
+          <h2 className="font-display text-3xl text-ocean-text-primary mb-4">
+            You don't have to carry everything alone.
+          </h2>
+          <p className="text-ocean-text-secondary mb-8">Take the first gentle step. Manas is ready to listen.</p>
+          <Link to="/signup" className="btn-primary">Create your safe space</Link>
+        </motion.div>
+      </section>
+
+      <footer className="relative z-10 border-t border-ocean-border py-8 text-center text-sm text-ocean-text-secondary">
+        Manas · A compassionate AI companion · Not a substitute for professional care
+      </footer>
     </div>
   );
 }

@@ -10,21 +10,19 @@ import {
   YAxis,
 } from "recharts";
 import client from "../api/client";
+import AmbientBackground from "../components/design/AmbientBackground";
+import GlassCard from "../components/design/GlassCard";
+import ThemeToggle from "../components/design/ThemeToggle";
+import BottomNav from "../components/layout/BottomNav";
+import ManasOrb from "../components/orb/ManasOrb";
+import { useWellnessStore } from "../store/wellnessStore";
 
 const DISTRESS_MAP = { low: 0, medium: 1, high: 2 };
 const DISTRESS_LABELS = { 0: "Low", 1: "Medium", 2: "High" };
 
-function getInitials(username) {
-  return username
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
 export default function Profile() {
   const navigate = useNavigate();
+  const moodLogs = useWellnessStore((s) => s.moodLogs);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,44 +32,41 @@ export default function Profile() {
       navigate("/login");
       return;
     }
-
-    const fetchProfile = async () => {
-      try {
-        const { data } = await client.get("/user/profile");
-        setProfile(data);
-      } catch (err) {
-        setError(err.response?.data?.detail || "Failed to load profile.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
+    client
+      .get("/user/profile")
+      .then(({ data }) => setProfile(data))
+      .catch((err) => setError(err.response?.data?.detail || "Failed to load profile."))
+      .finally(() => setLoading(false));
   }, [navigate]);
 
-  const chartData =
+  const distressChart =
     profile?.mood_history.map((entry) => ({
       date: entry.date.slice(5),
       level: DISTRESS_MAP[entry.distress_level] ?? 0,
-      label: entry.distress_level,
     })) || [];
+
+  const moodChart = moodLogs
+    .slice()
+    .reverse()
+    .slice(-14)
+    .map((m) => ({
+      date: new Date(m.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      value: m.value,
+    }));
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-manas-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <ManasOrb state="thinking" size="lg" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-red-600">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-manas-600 text-white rounded-xl text-sm"
-        >
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6">
+        <p className="text-ocean-danger">{error}</p>
+        <button type="button" onClick={() => window.location.reload()} className="btn-primary">
           Retry
         </button>
       </div>
@@ -79,77 +74,83 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-manas-50 via-white to-purple-50">
-      <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <Link
-          to="/chat"
-          className="text-manas-600 hover:underline text-sm font-medium"
-        >
-          ← Back to chat
-        </Link>
-        <span className="text-lg font-bold bg-gradient-to-r from-manas-600 to-manas-500 bg-clip-text text-transparent">
-          Manas
-        </span>
-        <div className="w-24" />
-      </nav>
+    <div className="min-h-screen relative pb-20 md:pb-10">
+      <AmbientBackground intensity="subtle" />
 
-      <div className="max-w-2xl mx-auto px-6 py-10">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center mb-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-manas-600 to-manas-500 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
-            {getInitials(profile.username)}
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">{profile.username}</h1>
-          <p className="text-gray-500 mt-1">
-            Joined {new Date(profile.joined_date).toLocaleDateString("en-US", {
+      <header className="sticky top-0 z-30 glass-card border-b border-ocean-border rounded-none px-6 py-4 flex items-center justify-between">
+        <Link to="/chat" className="text-sm text-ocean-primary hover:underline">
+          ← Chat
+        </Link>
+        <h1 className="font-display text-xl text-ocean-text-primary">Profile</h1>
+        <ThemeToggle compact />
+      </header>
+
+      <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
+        <GlassCard className="p-8 text-center">
+          <ManasOrb state="idle" size="md" className="mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold text-ocean-text-primary">{profile.username}</h2>
+          <p className="text-ocean-text-secondary mt-1 text-sm">
+            Joined{" "}
+            {new Date(profile.joined_date).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
               day: "numeric",
             })}
           </p>
-          <div className="mt-6 inline-block bg-manas-50 border border-manas-100 rounded-xl px-6 py-3">
-            <p className="text-3xl font-bold text-manas-600">{profile.total_sessions}</p>
-            <p className="text-sm text-gray-500">Total sessions</p>
+          <div className="mt-6 inline-block glass-card px-8 py-4 rounded-2xl">
+            <p className="text-3xl font-bold text-ocean-primary">{profile.total_sessions}</p>
+            <p className="text-sm text-ocean-text-secondary">Conversations</p>
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Mood History (30 days)</h2>
-          {chartData.length === 0 ? (
-            <p className="text-center text-gray-400 py-12">
-              No mood data yet. Start chatting to see your history.
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-ocean-text-primary mb-4">Session distress (30 days)</h3>
+          {distressChart.length === 0 ? (
+            <p className="text-center text-ocean-text-secondary py-10 text-sm">
+              Start chatting to see emotional patterns from your sessions.
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={distressChart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-secondary)" }} />
                 <YAxis
                   domain={[0, 2]}
                   ticks={[0, 1, 2]}
                   tickFormatter={(v) => DISTRESS_LABELS[v]}
-                  tick={{ fontSize: 12 }}
-                  stroke="#9CA3AF"
+                  tick={{ fontSize: 11, fill: "var(--text-secondary)" }}
                 />
-                <Tooltip
-                  formatter={(value, _name, props) => [
-                    DISTRESS_LABELS[value],
-                    "Distress",
-                  ]}
-                  labelFormatter={(label) => `Date: ${label}`}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="level"
-                  stroke="#7C3AED"
-                  strokeWidth={2}
-                  dot={{ fill: "#7C3AED", r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
+                <Tooltip formatter={(v) => [DISTRESS_LABELS[v], "Distress"]} />
+                <Line type="monotone" dataKey="level" stroke="var(--primary)" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
-        </div>
-      </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-ocean-text-primary mb-4">Your mood logs</h3>
+          {moodChart.length === 0 ? (
+            <p className="text-center text-ocean-text-secondary py-10 text-sm">
+              Log moods in Wellness to see your personal trend here.
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={moodChart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-secondary)" }} />
+                <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: "var(--text-secondary)" }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+          <Link to="/wellness" className="text-sm text-ocean-primary mt-4 inline-block hover:underline">
+            Open wellness tools →
+          </Link>
+        </GlassCard>
+      </main>
+
+      <BottomNav />
     </div>
   );
 }

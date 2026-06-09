@@ -12,7 +12,9 @@ from app.chat import CRISIS_RESPONSE, chat, format_cross_session_context
 from app.classifier import classify_distress
 from app.database import get_db
 from app.memory import embed_message, search_pdf_rag, search_semantic
-from app.models import Message, Session as ChatSession, User
+from app.models import Message, Session as ChatSession, User, UserPortfolio
+from app.notifications import notify_emergency_contacts
+from app.portfolio import format_portfolio_context
 from app.safety import safety_check, validate_input
 from app.schemas import ChatRequest, ChatResponse
 
@@ -84,6 +86,49 @@ def _load_cross_session_messages(
     )
 
 
+def _get_portfolio_context(db: Session, user_id) -> str | None:
+    portfolio = db.query(UserPortfolio).filter(UserPortfolio.user_id == user_id).first()
+    return format_portfolio_context(portfolio)
+
+
+def _handle_crisis(
+    db: Session,
+    user: User,
+    session: ChatSession,
+    user_text: str,
+) -> ChatResponse:
+    """
+    Same path as the crisis popup (distress=high + helpline message).
+    Also notifies emergency contacts if the user has SOS enabled.
+    """
+    user_msg = Message(session_id=session.id, role="user", content=user_text)
+    db.add(user_msg)
+    assistant_msg = Message(
+        session_id=session.id,
+        role="assistant",
+        content=CRISIS_RESPONSE,
+        distress_level="high",
+    )
+    db.add(assistant_msg)
+    session.updated_at = datetime.utcnow()
+    db.commit()
+
+    embed_message(str(user.id), str(session.id), user_text, source="chat")
+    embed_message(str(user.id), str(session.id), CRISIS_RESPONSE, source="chat")
+
+    notified = notify_emergency_contacts(db, user)
+    if notified:
+        logger.info("[SOS] Notified %d contact(s) for %s", notified, user.username)
+    else:
+        logger.info("[SOS] Crisis detected for %s — alerts off or not configured", user.username)
+
+    return ChatResponse(
+        response=CRISIS_RESPONSE,
+        session_id=session.id,
+        distress="high",
+    )
+
+
 def _is_recall_query(text: str) -> bool:
     lowered = text.lower()
     recall_phrases = [
@@ -145,10 +190,12 @@ def chat_endpoint(
         user_msg = Message(session_id=session.id, role="user", content=body.text)
         db.add(user_msg)
         db.flush()
+        portfolio_context = _get_portfolio_context(db, user.id)
         reply = chat(
             user_message=medical_instruction,
             history=history,
             distress="low",
+            portfolio_context=portfolio_context,
             session_id=str(session.id),
         )
         assistant_msg = Message(
@@ -171,50 +218,12 @@ def chat_endpoint(
         is_safe, _ = safety_check(body.text)
 
     if not is_safe:
-        user_msg = Message(session_id=session.id, role="user", content=body.text)
-        db.add(user_msg)
-        assistant_msg = Message(
-            session_id=session.id,
-            role="assistant",
-            content=CRISIS_RESPONSE,
-            distress_level="high",
-        )
-        db.add(assistant_msg)
-        session.updated_at = datetime.utcnow()
-        db.commit()
-
-        embed_message(str(user.id), str(session.id), body.text, source="chat")
-        embed_message(str(user.id), str(session.id), CRISIS_RESPONSE, source="chat")
-
-        return ChatResponse(
-            response=CRISIS_RESPONSE,
-            session_id=session.id,
-            distress="high",
-        )
+        return _handle_crisis(db, user, session, body.text)
 
     distress = classify_distress(body.text)
 
     if distress == "high":
-        user_msg = Message(session_id=session.id, role="user", content=body.text)
-        db.add(user_msg)
-        assistant_msg = Message(
-            session_id=session.id,
-            role="assistant",
-            content=CRISIS_RESPONSE,
-            distress_level="high",
-        )
-        db.add(assistant_msg)
-        session.updated_at = datetime.utcnow()
-        db.commit()
-
-        embed_message(str(user.id), str(session.id), body.text, source="chat")
-        embed_message(str(user.id), str(session.id), CRISIS_RESPONSE, source="chat")
-
-        return ChatResponse(
-            response=CRISIS_RESPONSE,
-            session_id=session.id,
-            distress="high",
-        )
+        return _handle_crisis(db, user, session, body.text)
 
     history = (
         db.query(Message)
@@ -249,6 +258,8 @@ def chat_endpoint(
     else:
         logger.info("[RAG] No relevant chunks — using general knowledge for: %r", body.text[:60])
 
+    portfolio_context = _get_portfolio_context(db, user.id)
+
     reply = chat(
         user_message=body.text,
         history=history,
@@ -256,6 +267,7 @@ def chat_endpoint(
         semantic_context=semantic_context,
         cross_session_context=cross_session_context,
         rag_context=rag_context,
+        portfolio_context=portfolio_context,
         session_id=str(session.id),
     )
 
