@@ -1,9 +1,9 @@
 import os
+
 from dotenv import load_dotenv
 from groq import Groq
-from app.memory import save_message, load_recent_memory
-from app.classifier import classify_distress
-from app.safety import safety_check, validate_input, review_output
+
+from app.safety import review_output, validate_input
 
 load_dotenv()
 
@@ -14,7 +14,13 @@ SYSTEM_PROMPT = """You are a compassionate peer listener called Manas.
 Your role is to provide emotional support and a safe space to talk.
 You do NOT diagnose, prescribe medication, or act as a therapist.
 You speak warmly, gently, and without judgment.
-For any serious distress, you always encourage speaking to a professional."""
+For any serious distress, you always encourage speaking to a professional.
+
+You DO remember this person across chat sessions. When they ask what they said
+before, in a previous chat, or in the past, refer honestly to the earlier
+conversation context provided below. Never say you have no memory or that each
+chat is a blank slate. Summarize gently what they shared. For past crisis
+messages, respond with continued care and encourage professional support."""
 
 CRISIS_RESPONSE = """I'm really concerned about what you've shared.
 Please reach out to a crisis helpline immediately:
@@ -25,24 +31,71 @@ Vandrevala Foundation: 1860-2662-345
 You don't have to face this alone."""
 
 
-def build_messages(history: list, user_message: str, distress: str) -> list:
-    """Convert memory history into Groq message format"""
+def format_cross_session_context(messages: list) -> str:
+    """Format messages from other sessions into readable context."""
+    if not messages:
+        return ""
+    lines = []
+    for msg in messages:
+        if isinstance(msg, dict):
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+        else:
+            role = msg.role
+            content = msg.content
+        speaker = "User" if role == "user" else "Manas"
+        lines.append(f"{speaker}: {content}")
+    return "\n".join(lines)
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+def build_messages(
+    history: list,
+    user_message: str,
+    distress: str,
+    semantic_context: str | None = None,
+    cross_session_context: str | None = None,
+    rag_context: str | None = None,
+) -> list:
+    """Convert PostgreSQL history into Groq message format."""
+
+    system_content = SYSTEM_PROMPT
+
+    if rag_context:
+        system_content += (
+            "\n\n--- Verified information from mental health resources ---\n"
+            f"{rag_context}\n"
+            "When answering, prefer this verified information where relevant. "
+            "If it does not fully address the question, supplement with your own knowledge "
+            "and make clear which parts come from the resources vs. general knowledge."
+        )
+
+    if cross_session_context:
+        system_content += (
+            "\n\n--- Earlier conversations (other sessions) ---\n"
+            f"{cross_session_context}"
+        )
+    if semantic_context:
+        system_content += (
+            f"\n\n--- Semantically related past messages ---\n{semantic_context}"
+        )
+
+    messages = [{"role": "system", "content": system_content}]
 
     for msg in history:
         if isinstance(msg, dict):
-            role = msg["parts"][0]["text"] if "parts" in msg else msg.get("content", "")
-            speaker = "assistant" if msg.get("role") == "model" else "user"
+            content = msg.get("content", "")
+            role = msg.get("role", "user")
         else:
-            role = msg.parts[0].text
-            speaker = "assistant" if msg.role == "model" else "user"
-        messages.append({"role": speaker, "content": role})
+            content = msg.content
+            role = msg.role
+
+        speaker = "assistant" if role == "assistant" else "user"
+        messages.append({"role": speaker, "content": content})
 
     if distress == "medium":
         guided = (
-            user_message +
-            " [Note to Manas: This person seems moderately distressed."
+            user_message
+            + " [Note to Manas: This person seems moderately distressed."
             " Respond with extra care and gently suggest professional help.]"
         )
         messages.append({"role": "user", "content": guided})
@@ -52,62 +105,35 @@ def build_messages(history: list, user_message: str, distress: str) -> list:
     return messages
 
 
-def chat(user_message: str) -> str:
-    """Send a message and get a response with memory, safety and distress detection"""
+def chat(
+    user_message: str,
+    history: list | None = None,
+    distress: str = "low",
+    semantic_context: str | None = None,
+    cross_session_context: str | None = None,
+    rag_context: str | None = None,
+    session_id: str | None = None,
+) -> str:
+    """Generate a Manas response using Groq with history, memory, and optional RAG."""
 
-    # Step 1 — Validate input
     is_valid, error_msg = validate_input(user_message)
     if not is_valid:
         return error_msg
 
-    # Step 2 — Hybrid safety check (keyword + LLM)
-    is_safe, safety_result = safety_check(user_message)
-    if not is_safe:
-        save_message("user", user_message)
-        save_message("model", CRISIS_RESPONSE)
-        return CRISIS_RESPONSE
+    history = history or []
+    messages = build_messages(
+        history,
+        user_message,
+        distress,
+        semantic_context,
+        cross_session_context,
+        rag_context,
+    )
 
-    # Step 3 — Distress classification
-    distress = classify_distress(user_message)
-    print(f"[Distress level: {distress}]")
-
-    # Step 4 — High distress = crisis response
-    if distress == "high":
-        save_message("user", user_message)
-        save_message("model", CRISIS_RESPONSE)
-        return CRISIS_RESPONSE
-
-    # Step 5 — Load memory
-    history = load_recent_memory(n=10)
-
-    # Step 6 — Build messages
-    messages = build_messages(history, user_message, distress)
-
-    # Step 7 — Send to Groq
     response = client.chat.completions.create(
         model=GROQ_MODEL,
-        messages=messages
+        messages=messages,
     )
 
     reply = response.choices[0].message.content
-
-    # Step 8 — Review output before sending
-    reply = review_output(reply)
-
-    # Step 9 — Save to memory
-    save_message("user", user_message)
-    save_message("model", reply)
-
-    return reply
-
-
-if __name__ == "__main__":
-    print("Manas: Hi, I'm here to listen. How are you feeling today?")
-    print("(Type 'exit' to quit)\n")
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() in ["exit", "quit"]:
-            print("Manas: Take care. I'm here whenever you need to talk.")
-            break
-        response = chat(user_input)
-        print(f"Manas: {response}\n")
+    return review_output(reply)
