@@ -46,12 +46,12 @@ def llm_safety_check(message: str) -> tuple:
             {
                 "role": "system",
                 "content": (
-                    "You are a crisis detection system. "
-                    "Respond with ONLY the word 'CRISIS' or 'SAFE'. "
-                    "Respond 'CRISIS' if the message contains any indication "
-                    "of suicidal thoughts, self-harm, or immediate danger "
-                    "to self or others. "
-                    "Respond 'SAFE' for everything else. "
+                    "You are a crisis detection system. Respond with ONLY the word 'CRISIS' or 'SAFE'. "
+                    "Respond 'CRISIS' ONLY if the message contains explicit suicidal ideation, explicit "
+                    "self-harm intent, or an immediate threat to life such as 'I want to kill myself' or "
+                    "'I want to hurt myself'. "
+                    "Everyday expressions of distress, frustration, anxiety, racing thoughts, sleep "
+                    "problems, or feeling overwhelmed are NOT crisis — respond 'SAFE' for these. "
                     "No explanation. No other words. Just CRISIS or SAFE."
                 )
             },

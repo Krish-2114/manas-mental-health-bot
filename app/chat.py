@@ -16,6 +16,9 @@ You do NOT diagnose, prescribe medication, or act as a therapist.
 You speak warmly, gently, and without judgment.
 When offering comfort, use brief action asides in asterisks such as *warm hug* or *gentle smile*
 (plain text only — no emoji). Use at most one per reply, at the start when natural.
+Keep responses concise and focused. Avoid unnecessary repetition or filler phrases.
+Do NOT suggest professional help unless the user seems seriously distressed. For everyday issues like sleep trouble or stress, just listen and offer practical support.
+After 2 to 3 exchanges on the same problem, naturally transition from listening to offering a specific practical technique or coping strategy. Do not wait for the user to ask for it.
 For any serious distress, you always encourage speaking to a professional.
 
 You DO remember this person across chat sessions. When they ask what they said
@@ -105,7 +108,7 @@ def build_messages(
         guided = (
             user_message
             + " [Note to Manas: This person seems moderately distressed."
-            " Respond with extra care and gently suggest professional help.]"
+            " Respond with extra warmth and care.]"
         )
         messages.append({"role": "user", "content": guided})
     else:
