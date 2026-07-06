@@ -12,9 +12,9 @@ from app.chat import CRISIS_RESPONSE, chat, format_cross_session_context
 from app.classifier import classify_distress
 from app.database import get_db
 from app.memory import embed_message, search_pdf_rag, search_semantic
-from app.models import Message, Session as ChatSession, User, UserPortfolio
+from app.models import Message, Session as ChatSession, User
 from app.notifications import notify_emergency_contacts
-from app.portfolio import format_portfolio_context
+from app.portfolio import get_cached_portfolio_context
 from app.safety import safety_check, validate_input
 from app.schemas import ChatRequest, ChatResponse
 
@@ -34,7 +34,7 @@ def _classify_intent(text: str) -> str:
     """
     try:
         resp = _groq.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[
                 {
                     "role": "system",
@@ -87,8 +87,7 @@ def _load_cross_session_messages(
 
 
 def _get_portfolio_context(db: Session, user_id) -> str | None:
-    portfolio = db.query(UserPortfolio).filter(UserPortfolio.user_id == user_id).first()
-    return format_portfolio_context(portfolio)
+    return get_cached_portfolio_context(db, user_id)
 
 
 def _handle_crisis(
@@ -236,15 +235,19 @@ def chat_endpoint(
     db.add(user_msg)
     db.flush()
 
-    recall_limit = 50 if _is_recall_query(body.text) else 30
-    cross_session_msgs = _load_cross_session_messages(
-        db, user.id, session.id, limit=recall_limit
-    )
-    cross_session_context = format_cross_session_context(cross_session_msgs) or None
+    recall_query = _is_recall_query(body.text)
+    if recall_query:
+        recall_limit = 50
+        cross_session_msgs = _load_cross_session_messages(
+            db, user.id, session.id, limit=recall_limit
+        )
+        cross_session_context = format_cross_session_context(cross_session_msgs) or None
+    else:
+        cross_session_context = None
 
-    semantic_n = 10 if _is_recall_query(body.text) else 5
+    semantic_n = 10 if recall_query else 5
     semantic_chunks = search_semantic(str(user.id), body.text, n=semantic_n)
-    if _is_recall_query(body.text) and not semantic_chunks:
+    if recall_query and not semantic_chunks:
         semantic_chunks = search_semantic(
             str(user.id), "previous conversations feelings thoughts", n=semantic_n
         )

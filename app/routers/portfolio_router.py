@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import EmergencyContact, User
-from app.portfolio import get_or_create_portfolio
+from app.portfolio import get_or_create_portfolio, invalidate_portfolio_cache
 from app.schemas import (
     EmergencyContactCreate,
     EmergencyContactOut,
@@ -52,6 +52,7 @@ def update_portfolio(
     portfolio.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(portfolio)
+    invalidate_portfolio_cache(user.id)
     return portfolio
 
 

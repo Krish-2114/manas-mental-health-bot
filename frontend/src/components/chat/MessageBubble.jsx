@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useStreamText } from "../../hooks/useStreamText";
 import ManasOrb from "../orb/ManasOrb";
 import MessageContent from "./MessageContent";
+import { normalizeAssistantFormatting } from "../../utils/messageContent";
 
 function DistressBadge({ level }) {
   const styles = {
@@ -17,7 +18,9 @@ function DistressBadge({ level }) {
 }
 
 function AssistantMessage({ message, streaming, onStreamComplete }) {
-  const { displayed, done } = useStreamText(message.content, streaming);
+  const content = message.content ?? "";
+  const normalized = useMemo(() => normalizeAssistantFormatting(content), [content]);
+  const { displayed, done } = useStreamText(normalized, streaming);
 
   useEffect(() => {
     if (streaming && done && onStreamComplete) onStreamComplete();
@@ -25,7 +28,7 @@ function AssistantMessage({ message, streaming, onStreamComplete }) {
 
   const isCrisis = message.distress_level === "high";
   const orbState = isCrisis ? "crisis" : streaming ? "responding" : "companion";
-  const text = streaming ? displayed : message.content;
+  const text = streaming ? displayed : normalized;
 
   return (
     <div className="flex gap-3 mb-5 message-enter max-w-[90%]">
@@ -33,7 +36,7 @@ function AssistantMessage({ message, streaming, onStreamComplete }) {
       <div className="min-w-0 flex-1">
         <div className="glass-card px-5 py-4 rounded-3xl rounded-bl-lg bg-gradient-to-br from-ocean-secondary-soft/50 to-ocean-surface/30">
           <MessageContent content={text} streaming={streaming} />
-          {streaming && displayed.length < message.content.length && (
+          {streaming && displayed.length < normalized.length && (
             <span className="inline-block w-1.5 h-4 ml-0.5 bg-ocean-accent animate-pulse align-middle" />
           )}
         </div>

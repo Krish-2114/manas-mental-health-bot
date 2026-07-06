@@ -7,16 +7,20 @@ export function useStreamText(fullText, active, wordsPerTick = 3, intervalMs = 3
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (!active || !fullText) {
+    // Single timer handle so EVERY return path below is a cleanup function,
+    // never a raw setInterval id. Guarantees React always gets a callable `destroy`.
+    let timer = null;
+    const cleanup = () => {
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    if (!active || !fullText || reduced) {
       setDisplayed(fullText || "");
       setDone(true);
-      return;
-    }
-
-    if (reduced) {
-      setDisplayed(fullText);
-      setDone(true);
-      return;
+      return cleanup;
     }
 
     const words = fullText.split(/(\s+)/);
@@ -24,16 +28,16 @@ export function useStreamText(fullText, active, wordsPerTick = 3, intervalMs = 3
     setDisplayed("");
     setDone(false);
 
-    const timer = setInterval(() => {
+    timer = setInterval(() => {
       index = Math.min(index + wordsPerTick, words.length);
       setDisplayed(words.slice(0, index).join(""));
       if (index >= words.length) {
-        clearInterval(timer);
+        cleanup();
         setDone(true);
       }
     }, intervalMs);
 
-    return () => clearInterval(timer);
+    return cleanup;
   }, [fullText, active, wordsPerTick, intervalMs, reduced]);
 
   return { displayed, done };

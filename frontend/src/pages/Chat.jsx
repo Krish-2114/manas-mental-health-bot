@@ -10,6 +10,7 @@ import WellnessSidebar from "../components/chat/WellnessSidebar";
 import CrisisSupport from "../components/crisis/CrisisSupport";
 import BottomNav from "../components/layout/BottomNav";
 import { useWellnessStore } from "../store/wellnessStore";
+import { getErrorMessage } from "../utils/errors";
 
 export default function Chat() {
   const navigate = useNavigate();
@@ -36,7 +37,9 @@ export default function Chat() {
     else fetchSessions();
   }, [navigate]);
 
-  useEffect(() => scrollToBottom(), [messages, loading, streamingId]);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading, streamingId]);
 
   useEffect(() => {
     if (loading) setOrbState("thinking");
@@ -50,7 +53,7 @@ export default function Chat() {
       const { data } = await client.get("/sessions");
       setSessions(data);
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to load sessions.");
+      setError(getErrorMessage(err, "Failed to load sessions."));
     } finally {
       setSessionsLoading(false);
     }
@@ -64,7 +67,7 @@ export default function Chat() {
       setMessages(data);
       setShowCrisis(data.some((m) => m.distress_level === "high"));
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to load messages.");
+      setError(getErrorMessage(err, "Failed to load messages."));
     } finally {
       setMessagesLoading(false);
     }
@@ -106,7 +109,7 @@ export default function Chat() {
 
       const assistantMsg = {
         role: "assistant",
-        content: data.response,
+        content: data.response ?? "",
         distress_level: data.distress,
         created_at: new Date().toISOString(),
         _id: Date.now(),
@@ -116,7 +119,7 @@ export default function Chat() {
       if (data.distress === "high") setShowCrisis(true);
     } catch (err) {
       setMessages((prev) => prev.slice(0, -1));
-      setError(err.response?.data?.detail || "Failed to send message.");
+      setError(getErrorMessage(err, "Failed to send message."));
     } finally {
       setLoading(false);
       setOrbState("idle");
@@ -165,7 +168,7 @@ export default function Chat() {
                 setShowCrisis(false);
               }
             } catch (err) {
-              setError(err.response?.data?.detail || "Failed to delete session.");
+              setError(getErrorMessage(err, "Failed to delete session."));
             }
           }}
           loading={sessionsLoading}
@@ -197,7 +200,7 @@ export default function Chat() {
 
           {error && (
             <div className="mx-4 md:mx-8 mb-2 p-3 glass-card text-ocean-danger text-sm rounded-2xl flex justify-between">
-              <span>{error}</span>
+              <span>{typeof error === "string" ? error : String(error)}</span>
               <button type="button" onClick={() => setError("")} aria-label="Dismiss error">×</button>
             </div>
           )}

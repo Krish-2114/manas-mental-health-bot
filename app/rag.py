@@ -14,7 +14,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-GROQ_MODEL = "llama-3.1-8b-instant"
+GROQ_MODEL = "openai/gpt-oss-20b"
 PDF_DIR = Path("data/resources")
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 50

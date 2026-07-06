@@ -8,7 +8,7 @@ from app.safety import review_output, validate_input
 load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-GROQ_MODEL = "llama-3.1-8b-instant"
+GROQ_MODEL = "openai/gpt-oss-20b"
 
 SYSTEM_PROMPT = """You are a compassionate peer listener called Manas.
 Your role is to provide emotional support and a safe space to talk.
@@ -17,6 +17,7 @@ You speak warmly, gently, and without judgment.
 When offering comfort, use brief action asides in asterisks such as *warm hug* or *gentle smile*
 (plain text only — no emoji). Use at most one per reply, at the start when natural.
 Keep responses concise and focused. Avoid unnecessary repetition or filler phrases.
+When using numbered lists, put each item on its own line starting with the number (e.g. "1. ..." then newline "2. ...") — never put the next number at the end of the previous item.
 Do NOT suggest professional help unless the user seems seriously distressed. For everyday issues like sleep trouble or stress, just listen and offer practical support.
 After 2 to 3 exchanges on the same problem, naturally transition from listening to offering a specific practical technique or coping strategy. Do not wait for the user to ask for it.
 For any serious distress, you always encourage speaking to a professional.
@@ -150,4 +151,11 @@ def chat(
     )
 
     reply = response.choices[0].message.content
+    # Reasoning models (e.g. openai/gpt-oss-20b) can return None/empty content.
+    # Never let that propagate — it would crash review_output and break the response.
+    if not reply or not reply.strip():
+        reply = (
+            "I'm here with you. I didn't quite catch that — "
+            "could you tell me a little more about what's on your mind?"
+        )
     return review_output(reply)
